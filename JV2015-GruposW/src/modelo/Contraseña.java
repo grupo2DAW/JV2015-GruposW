@@ -27,6 +27,11 @@ public class Contraseña implements Serializable {
 		this(contraseña.texto);
 	}
 
+	public Contraseña(Object textoEncriptado) {
+		assert textoEncriptado != null;
+		texto = (String)textoEncriptado;
+	}
+
 	public void setTexto(String texto) {
 		assert esValida(texto);
 		this.texto = encriptar(texto);

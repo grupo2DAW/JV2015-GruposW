@@ -10,13 +10,18 @@ package accesoDatos;
 
 import java.util.List;
 
-import accesoDatos.fichero.*;
+import accesoDatos.db4o.MundosDAO;
+import accesoDatos.db4o.PatronesDAO;
+import accesoDatos.db4o.SesionesDAO;
+import accesoDatos.db4o.SimulacionesDAO;
+import accesoDatos.mySql.UsuariosDAO;
+
 import modelo.*;
 
 public class GestionDatos {
 
 	// Requerido por el patrón Singleton
-	private static GestionDatos instancia = null;
+	private static GestionDatos instancia;
 
 	// Requerido por el patrón Fachada
 	private UsuariosDAO usuariosDAO; 
@@ -24,18 +29,6 @@ public class GestionDatos {
 	private SimulacionesDAO simulacionesDAO;
 	private MundosDAO mundosDAO;
 	private PatronesDAO patronesDAO;
-
-	/**
-	 * Constructor por defecto de uso interno.
-	 * Sólo se ejecutará una vez.
-	 */
-	private GestionDatos() {
-		usuariosDAO = UsuariosDAO.getInstancia();
-		sesionesDAO = SesionesDAO.getInstancia();
-		patronesDAO = PatronesDAO.getInstancia();
-		mundosDAO = MundosDAO.getInstancia();
-		simulacionesDAO = SimulacionesDAO.getInstancia();
-	}
 
 	/**
 	 *  Método estático de acceso a la instancia única.
@@ -50,23 +43,28 @@ public class GestionDatos {
 		}
 		return instancia;
 	}
+	
+	/**
+	 * Constructor por defecto de uso interno.
+	 * Sólo se ejecutará una vez.
+	 */
+	private GestionDatos() {
+		usuariosDAO = UsuariosDAO.getInstancia();
+		sesionesDAO = SesionesDAO.getInstancia();
+		patronesDAO = PatronesDAO.getInstancia();
+		mundosDAO = MundosDAO.getInstancia();
+		simulacionesDAO = SimulacionesDAO.getInstancia();
+	}
 
 	/**
 	 *  Cierra almacenes de datos.
 	 */
 	public void cerrar() {
-		guardarDatos();
-	}
-
-	/**
-	 *  actualiza ficheros de datos.
-	 */
-	private void guardarDatos() {
-		usuariosDAO.guardarDatos();
-		sesionesDAO.guardarDatos();
-		patronesDAO.guardarDatos();
-		mundosDAO.guardarDatos();
-		simulacionesDAO.guardarDatos();	
+		usuariosDAO.cerrar();
+		sesionesDAO.cerrar();
+		patronesDAO.cerrar();
+		mundosDAO.cerrar();
+		simulacionesDAO.cerrar();
 	}
 
 	// FACHADA usuariosDAO
