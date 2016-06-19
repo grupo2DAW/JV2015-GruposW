@@ -55,29 +55,39 @@ public class UsuariosDAO implements OperacionesDAO {
 	 */
 	public static UsuariosDAO getInstancia() {
 		if (instancia == null) {
-			instancia = new UsuariosDAO();
+			try {
+				instancia = new UsuariosDAO();
+			} 
+			catch (SQLException | DatosException e) {
+				e.printStackTrace();
+			}
 		}
 		return instancia;
 	}
 
 	/**
 	 * Constructor por defecto de uso interno.
+	 * @throws SQLException 
+	 * @throws DatosException 
 	 */
-	private UsuariosDAO() {
+	private UsuariosDAO() throws SQLException, DatosException {
 		inicializar();
-		//System.out.println(obtener("III0I"));
-		if (obtener("III0I") == null) {
+		if (obtener("III0I") == null && obtener("AAA0A") == null) {
 			cargarPredeterminados();
 		}
 	}
 
-	private void inicializar() {
+	/**
+	 * Inicializa el DAO, detecta si existen las tablas de datos capturando la
+	 * excepción SQLException.
+	 * @throws SQLException
+	 */
+	private void inicializar() throws SQLException {
 		bufferObjetos = new ArrayList<Usuario>();
 		db = Conexion.getDb();
 		try {
 			// Se crea dos Statement en la conexión a la BD, 
 			//para realizar las consultas.
-
 			sentenciaUsr = db.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, 
 					ResultSet.CONCUR_UPDATABLE);
 			sentenciaId = db.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, 
@@ -95,74 +105,281 @@ public class UsuariosDAO implements OperacionesDAO {
 		bufferObjetos = new ArrayList<Usuario>(); 
 	}
 
-	private void crearTablaUsuarios() {
-		try {
-			// Se crea un Statement en la conexión a la BD, para realizar la operación.
-			Statement s = db.createStatement();
+	/**
+	 * Crea la tabla de usuarios en la base de datos.
+	 * @throws SQLException
+	 */
+	private void crearTablaUsuarios() throws SQLException {
+		// Se crea un Statement en la conexión a la BD, para realizar la operación.
+		Statement s = db.createStatement();
 
-			// Crea la tabla usuarios
-			s.executeUpdate("CREATE TABLE usuarios (" 
-					+ "idUsr VARCHAR(5) NOT NULL,"
-					+ "nif VARCHAR(9) NOT NULL," 
-					+ "nombre VARCHAR(45) NOT NULL," 
-					+ "apellidos VARCHAR(45) NOT NULL," 
-					+ "domicilio VARCHAR(45) NOT NULL," 
-					+ "correo VARCHAR(45) NOT NULL," 
-					+ "fechaNacimiento DATE," 
-					+ "fechaAlta DATE," 
-					+ "claveAcceso VARCHAR(45) NOT NULL," 	
-					+ "rol VARCHAR(20) NOT NULL," 
-					+ "PRIMARY KEY(idUsr));");
-		} 
-		catch (Exception e) {
-			e.printStackTrace();
-		}
+		// Crea la tabla usuarios
+		s.executeUpdate("CREATE TABLE usuarios (" 
+				+ "idUsr VARCHAR(5) NOT NULL,"
+				+ "nif VARCHAR(9) NOT NULL," 
+				+ "nombre VARCHAR(45) NOT NULL," 
+				+ "apellidos VARCHAR(45) NOT NULL," 
+				+ "domicilio VARCHAR(45) NOT NULL," 
+				+ "correo VARCHAR(45) NOT NULL," 
+				+ "fechaNacimiento DATE," 
+				+ "fechaAlta DATE," 
+				+ "claveAcceso VARCHAR(16) NOT NULL," 	
+				+ "rol VARCHAR(20) NOT NULL," 
+				+ "PRIMARY KEY(idUsr));");
 	}
 
-	private void crearTablaEquivalId() {
-		try {
-			// Se crea un Statement en la conexión a la BD, para realizar la operación
-			Statement s = db.createStatement();
+	/**
+	 * Crea la tabla de equivalencias en la base de datos.
+	 * @throws SQLException
+	 */
+	private void crearTablaEquivalId() throws SQLException {
+		// Se crea un Statement en la conexión a la BD, para realizar la operación
+		Statement s = db.createStatement();
 
-			// Crea la tabla equivalencias
-			s.executeUpdate("CREATE TABLE equivalid (" 
-					+ "equival VARCHAR(45) NOT NULL,"
-					+ "idUsr VARCHAR(5) NOT NULL,"  
-					+ "PRIMARY KEY(equival));");
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		// Crea la tabla equivalencias
+		s.executeUpdate("CREATE TABLE equivalid (" 
+				+ "equival VARCHAR(45) NOT NULL,"
+				+ "idUsr VARCHAR(5) NOT NULL,"  
+				+ "PRIMARY KEY(equival));");
 	}
 
 	/**
 	 *  Método para generar de datos predeterminados.
+	 * @throws SQLException 
+	 * @throws DatosException 
 	 */
-	private void cargarPredeterminados() {
-		String nombreUsr = Configuracion.get().getProperty("usuario.admin");
-		String password = Configuracion.get().getProperty("usuario.passwordPredeterminada");	
-		Usuario usrPredeterminado = new Usuario(new Nif("76543210A"), nombreUsr, "Admin Admin", 
+	private void cargarPredeterminados() throws SQLException, DatosException {
+		String password = Configuracion.get().getProperty("usuario.passwordPredeterminada");
+		String nombreAdmin = Configuracion.get().getProperty("usuario.admin");	
+		String nombreInvitado = Configuracion.get().getProperty("usuario.invitado");
+		
+		alta(new Usuario(new Nif("76543210A"), nombreAdmin, "Admin Admin", 
 				new Direccion("30012", "Iglesia", "0", "Murcia", "España"), 
 				new Correo("jv.admin" + "@gmail.com"), new Fecha(), 
-				new Fecha(), new Contraseña(password), RolUsuario.ADMINISTRADOR);
-		try {
-			alta(usrPredeterminado);
-		} 
-		catch (DatosException e1) {}
-		registrarEquivalenciaId(usrPredeterminado);
+				new Fecha(), new Contraseña(password), RolUsuario.ADMINISTRADOR));
 
-		nombreUsr = Configuracion.get().getProperty("usuario.invitado");
-		usrPredeterminado = new Usuario(new Nif("06543210I"), nombreUsr, "Invitado Invitado", 
+		alta(new Usuario(new Nif("06543210I"), nombreInvitado, "Invitado Invitado", 
 				new Direccion("30012", "Iglesia", "0", "Murcia", "España"), 
 				new Correo("jv.invitado" + "@gmail.com"), new Fecha(), 
-				new Fecha(), new Contraseña(password), RolUsuario.INVITADO);
-		try {
-			alta(usrPredeterminado);
-		} 
-		catch (DatosException e) {}
-		registrarEquivalenciaId(usrPredeterminado);
+				new Fecha(), new Contraseña(password), RolUsuario.INVITADO));
 	}
 
-	// MÉTODOS PARA LOS TABLEMODEL'S 
+	// MÉTODOS DAO Usuarios
+	/**
+	 * Da de alta un nuevo usuario en la base de datos.
+	 * @param usr, el objeto a dar de alta.
+	 * @throws DatosException 
+	 */	
+	@Override
+	public void alta(Object obj) throws DatosException {	
+		Usuario usr = (Usuario) obj;
+		if (obtener(usr) == null) {
+			try {
+				almacenar(usr);
+				registrarEquivalenciaId(usr);
+			} 
+			catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
+		else {
+			throw new DatosException("ALTA: El Usuario " + usr.getIdUsr() + " ya existe...");
+		}
+	}
+	
+	/**
+	 * Obtiene el usuario buscado dado un objeto. 
+	 * Si no existe devuelve null.
+	 * @param Usuario a obtener.
+	 * @return (Usuario) buscado. 
+	 */	
+	@Override
+	public Usuario obtener(Object obj) {
+		return obtener(((Usuario) obj).getIdUsr());
+	}
+	
+	/**
+	 * Obtiene el usuario buscado dado su idUsr. 
+	 * Si no existe devuelve null.
+	 * @param id del usuario a obtener.
+	 * @return (Usuario) buscado. 
+	 */	
+	@Override
+	public Usuario obtener(String idUsr) {
+		// Se realiza la consulta y los resultados quedan en el ResultSet
+		try {		
+			rsUsuarios = sentenciaUsr.executeQuery("SELECT * FROM usuarios WHERE idUsr = '" + idUsr + "'");
+
+			// Establece columnas y etiquetas
+			estableceColumnasModelo();
+
+			// Borrado previo de filas
+			borraFilasModelo();
+
+			// Volcado desde el resulSet
+			rellenaFilasModelo();
+
+			// Actualiza buffer de objetos.
+			sincronizarBufferObjetos();
+			if (bufferObjetos.size() > 0) {
+				return bufferObjetos.get(0);
+			}
+		} 
+		catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	/**
+	 * almacena usuario en la base de datos.
+	 * @param usr, el objeto a procesar.
+	 * @throws SQLException 
+	 * @throws DatosException 
+	 */
+	private void almacenar(Usuario usr) throws SQLException {
+		ResultSet rsUsr = null;
+		// Se realiza la consulta y los resultados quedan en el ResultSet actualizable.
+		rsUsr = sentenciaUsr.executeQuery("SELECT * FROM usuarios");
+		rsUsr.moveToInsertRow();
+		rsUsr.updateString("idUsr", usr.getIdUsr());
+		rsUsr.updateString("nif", usr.getNif().toString());
+		rsUsr.updateString("nombre", usr.getNombre());
+		rsUsr.updateString("apellidos", usr.getApellidos());
+		rsUsr.updateString("domicilio", usr.getDomicilio().toString());
+		rsUsr.updateString("correo", usr.getCorreo().toString());
+		rsUsr.updateDate("fechaNacimiento", new java.sql.Date(usr.getFechaNacimiento().getTime()));
+		rsUsr.updateDate("fechaAlta",  new java.sql.Date(usr.getFechaAlta().getTime()));
+		rsUsr.updateString("claveAcceso", usr.getClaveAcceso().toString());
+		rsUsr.updateString("rol", usr.getRol().toString());
+		rsUsr.insertRow();
+		rsUsr.beforeFirst();	
+	}
+
+	/**
+	 * Registra las equivalencias de nif y correo para un idUsr.
+	 * @param usuario
+	 * @throws SQLException 
+	 */
+	private void registrarEquivalenciaId(Usuario usr) throws SQLException {
+		ResultSet rsEquival = null;
+		// Se realiza la consulta y los resultados quedan en el ResultSet
+		rsEquival = sentenciaId.executeQuery("SELECT * FROM equivalid");
+		rsEquival.moveToInsertRow();
+		rsEquival.updateString("equival", usr.getIdUsr());
+		rsEquival.updateString("idUsr", usr.getIdUsr().toString());
+		rsEquival.insertRow();
+		rsEquival.beforeFirst();
+		rsEquival.moveToInsertRow();
+		rsEquival.updateString("equival", usr.getNif().toString());
+		rsEquival.updateString("idUsr", usr.getIdUsr().toString());
+		rsEquival.insertRow();
+		rsEquival.beforeFirst();
+		rsEquival.moveToInsertRow();
+		rsEquival.updateString("equival", usr.getCorreo().toString());
+		rsEquival.updateString("idUsr", usr.getIdUsr().toString());
+		rsEquival.insertRow();
+		rsEquival.beforeFirst();
+	}
+
+	/** Devuelve listado completo de usuarios.
+	 *  @return texto con el volcado de todos los usuarios.
+	 */
+	public String listarDatos() {
+		try {
+			return obtenerTodos().toString();
+		} 
+		catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	/**
+	 * Regenera lista de los objetos procesando el tableModel. 
+	 * @throws SQLException 
+	 */	
+	private void sincronizarBufferObjetos() throws SQLException {
+		bufferObjetos.clear();
+		for (int i = 0; i < tmUsuarios.getRowCount(); i++) {
+			Nif nif = new Nif((String) tmUsuarios.getValueAt(i, 1));
+			String nombre = (String) tmUsuarios.getValueAt(i, 2);
+			String apellidos = (String) tmUsuarios.getValueAt(i, 3);
+			Direccion domicilio = new Direccion((String) tmUsuarios.getValueAt(i, 4));
+			Correo correo = new Correo((String) tmUsuarios.getValueAt(i, 5));
+			java.sql.Date fechaSQL = (java.sql.Date) tmUsuarios.getValueAt(i, 6);
+			Fecha fechaNacimiento = new Fecha(fechaSQL.getYear(), fechaSQL.getMonth()+1, fechaSQL.getDay());
+			fechaSQL = (java.sql.Date) tmUsuarios.getValueAt(i, 7);
+			Fecha fechaAlta = new Fecha(fechaSQL.getYear(), fechaSQL.getMonth()+1, fechaSQL.getDay());
+			Contraseña claveAcceso = new Contraseña(tmUsuarios.getValueAt(i, 8));
+			RolUsuario rol = null;
+			switch ((String) tmUsuarios.getValueAt(i, 9)) {
+			case "INVITADO":  
+				rol = RolUsuario.INVITADO;
+				break;
+			case "NORMAL":
+				rol = RolUsuario.NORMAL;
+				break;
+			case "ADMINISTRADOR":
+				rol = RolUsuario.ADMINISTRADOR;
+				break;
+			}	
+			// Genera y guarda objeto
+			bufferObjetos.add(new Usuario(nif, nombre, apellidos, domicilio, correo, 
+					fechaNacimiento, fechaAlta, claveAcceso, rol));
+		}
+	}
+
+	/**
+	 * Obtiene todos los usuarios almacenados. 
+	 * Si no hay resultados devuelve null.
+	 * @param idUsr a obtener.
+	 * @return (DefaultTableModel) result obtenido.
+	 * @throws SQLException 
+	 */	
+	public List<Usuario> obtenerTodos() throws SQLException {
+		// Se crea un Statement (declaración) en la conexión a la BD, 
+		// para realizar la consulta
+		java.sql.Statement s;
+		s = db.createStatement();
+
+		// Se realiza la consulta y los resultados quedan en el ResultSet
+		rsUsuarios = s.executeQuery("SELECT * FROM usuarios");
+
+		// Establece columnas y etiquetas
+		this.estableceColumnasModelo();
+
+		// Borrado previo de filas
+		this.borraFilasModelo();
+
+		// Volcado desde el resulSet
+		this.rellenaFilasModelo();
+
+		// Actualiza buffer de objetos.
+		sincronizarBufferObjetos();
+		return bufferObjetos;
+	}
+
+
+	/**
+	 * Obtiene el idUsr usado internamente a partir de otro equivalente.
+	 * @param id - la clave alternativa. 
+	 * @return - El idUsr equivalente.
+	 */
+	public String obtenerEquivalencia(String id) {
+		// Se realiza la consulta y los resultados quedan en el ResultSet
+		try {		
+			ResultSet rsEquival = sentenciaUsr.executeQuery("SELECT * FROM equivalid WHERE equival = '" + id + "'");
+			if (rsEquival.next()) {
+				return (String) rsEquival.getObject(2);
+			}
+		} 
+		catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
 	/**
 	 * Crea las columnas del TableModel a partir de los metadatos del ResultSet
 	 * de una consulta a base de datos
@@ -210,7 +427,6 @@ public class UsuariosDAO implements OperacionesDAO {
 					datosFila[i] = rsUsuarios.getObject(i + 1);
 				((DefaultTableModel) tmUsuarios).addRow(datosFila);
 			}
-			rsUsuarios.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -228,186 +444,10 @@ public class UsuariosDAO implements OperacionesDAO {
 		// Ejecuta la consulta, y los resultados quedan almacenados en el
 		// ResultSet.
 		ResultSet rsUsuarios = stm
-				.executeQuery("SELECT idUsr, nif, nombre, apellidos, correo, domicilio, fechaAlta, rol FROM usuarios");
+				.executeQuery("SELECT * FROM usuarios");
 		return rsUsuarios;
 	}
 
-
-	//MÉTODOS DAO Usuarios
-	/** Devuelve listado completo de usuarios.
-	 *  @return texto con el volcado de todos los usuarios.
-	 */
-	public String listarDatos() {
-		return obtenerTodos().toString();
-	}
-
-	/**
-	 * Obtiene el usuario buscado dado su idUsr. 
-	 * Si no existe devuelve null.
-	 * @param id del usuario a obtener.
-	 * @return (Usuario) buscado. 
-	 */	
-	@Override
-	public Usuario obtener(String idUsr) {
-		// Se realiza la consulta y los resultados quedan en el ResultSet
-		try {		
-			rsUsuarios = sentenciaUsr.executeQuery("SELECT * FROM usuarios WHERE idUsr = '" + idUsr + "'");
-
-			// Establece columnas y etiquetas
-			estableceColumnasModelo();
-
-			// Borrado previo de filas
-			borraFilasModelo();
-
-			// Volcado desde el resulSet
-			rellenaFilasModelo();
-
-			// Actualiza buffer de objetos.
-			sincronizarBufferObjetos();
-			if (bufferObjetos.size() > 0) {
-				return bufferObjetos.get(0);
-			}
-		} 
-		catch (SQLException e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-
-	/**
-	 * Obtiene el usuario buscado dado un objeto. 
-	 * Si no existe devuelve null.
-	 * @param Usuario a obtener.
-	 * @return (Usuario) buscado. 
-	 */	
-	@Override
-	public Object obtener(Object obj) {
-		return obtener(((Usuario) obj).getIdUsr());
-	}
-
-	/**
-	 * Regenera lista de los objetos procesando el tableModel. 
-	 */	
-	private void sincronizarBufferObjetos() {
-		bufferObjetos.clear();
-		for (int i=0;i < tmUsuarios.getRowCount(); i++) {
-			Nif nif = new Nif((String) tmUsuarios.getValueAt(i, 1));
-			String nombre = (String) tmUsuarios.getValueAt(i, 2);
-			String apellidos = (String) tmUsuarios.getValueAt(i, 3);
-			Direccion domicilio = new Direccion((String) tmUsuarios.getValueAt(i, 4));
-			Correo correo = new Correo((String) tmUsuarios.getValueAt(i, 5));
-			java.sql.Date fechaSQL = (Date) tmUsuarios.getValueAt(i, 6);
-			Fecha fechaNacimiento = new Fecha(fechaSQL.getYear(), fechaSQL.getMonth(), fechaSQL.getDay());
-			fechaSQL = (Date) tmUsuarios.getValueAt(i, 7);
-			Fecha fechaAlta = new Fecha(fechaSQL.getYear(), fechaSQL.getMonth(), fechaSQL.getDay());
-			Contraseña claveAcceso = new Contraseña((String) tmUsuarios.getValueAt(i, 8));
-
-			RolUsuario rol = null;
-			switch ((String)tmUsuarios.getValueAt(i, 9)) {
-			case "INVITADO":  
-				rol = RolUsuario.INVITADO;
-				break;
-			case "NORMAL":
-				rol = RolUsuario.NORMAL;
-				break;
-			case "ADMINISTRADOR":
-				rol = RolUsuario.ADMINISTRADOR;
-				break;
-			}
-
-			// Genera y guarda objeto
-			bufferObjetos.add(new Usuario(nif, nombre, apellidos, domicilio, correo, 
-					fechaNacimiento, fechaAlta, claveAcceso, rol));
-		}
-	}
-
-	/**
-	 * Obtiene todos los usuarios almacenados. 
-	 * Si no hay resultados devuelve null.
-	 * @param idUsr a obtener.
-	 * @return (DefaultTableModel) result obtenido.
-	 */	
-	public List<Usuario> obtenerTodos() {
-		try {
-			// Se crea un Statement (declaración) en la conexión a la BD, 
-			// para realizar la consulta
-			java.sql.Statement s;
-			s = db.createStatement();
-
-			// Se realiza la consulta y los resultados quedan en el ResultSet
-			rsUsuarios = s.executeQuery("SELECT * FROM usuarios");
-
-			// Establece columnas y etiquetas
-			this.estableceColumnasModelo();
-
-			// Borrado previo de filas
-			this.borraFilasModelo();
-
-			// Volcado desde el resulSet
-			this.rellenaFilasModelo();
-
-			// Actualiza buffer de objetos.
-			sincronizarBufferObjetos();
-		} 
-		catch (SQLException e) {
-			e.printStackTrace();
-		}
-		return bufferObjetos;
-	}
-
-	/**
-	 * Da de alta un nuevo usuario en la base de datos.
-	 * @param usr, el objeto a dar de alta.
-	 * @throws DatosException 
-	 */	
-	@Override
-	public void alta(Object obj) throws DatosException {	
-		Usuario usr = (Usuario) obj;
-		if (obtener(usr) == null) {
-			almacenar(usr);
-			registrarEquivalenciaId(usr);
-		}
-		else {
-			throw new DatosException("ALTA: El Usuario " + usr.getIdUsr() + " ya existe...");
-		}
-	}
-
-	/**
-	 * almacena usuario en la base de datos.
-	 * @param usr, el objeto a procesar.
-	 * @throws DatosException 
-	 */
-	private void almacenar(Usuario usr) {
-		try {
-			ResultSet rsUsr = null;
-			// Se realiza la consulta y los resultados quedan en el ResultSet
-			rsUsr = sentenciaUsr.executeQuery("SELECT * FROM usuarios");
-			rsUsr.moveToInsertRow();
-			rsUsr.updateString("idUsr", ((Usuario)usr).getIdUsr());
-			rsUsr.updateString("nif", ((Usuario)usr).getNif().toString());
-			rsUsr.updateString("nombre", ((Usuario)usr).getNombre());
-			rsUsr.updateString("apellidos", ((Usuario)usr).getApellidos());
-			rsUsr.updateString("domicilio", ((Usuario)usr).getDomicilio().toString());
-			rsUsr.updateString("correo", ((Usuario)usr).getCorreo().toString());
-			rsUsr.updateDate("fechaNacimiento", new java.sql.Date(
-					((Usuario)usr).getFechaNacimiento().getAño(),
-					((Usuario)usr).getFechaNacimiento().getMes(),
-					((Usuario)usr).getFechaNacimiento().getDia()
-					));
-			rsUsr.updateDate("fechaAlta",  new java.sql.Date(
-					((Usuario)usr).getFechaAlta().getAño(),
-					((Usuario)usr).getFechaAlta().getMes(),
-					((Usuario)usr).getFechaAlta().getDia()
-					));
-			rsUsr.updateString("claveAcceso", ((Usuario)usr).getIdUsr());
-			rsUsr.updateString("rol", ((Usuario)usr).getRol().toString());
-			rsUsr.insertRow();
-			rsUsr.beforeFirst();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}	
-	}
-	
 	/**
 	 * Da de baja un usuario de la base de datos.
 	 * @param idUsr, id del usuario a dar de baja.
@@ -417,8 +457,13 @@ public class UsuariosDAO implements OperacionesDAO {
 	public Object baja(String idUsr) throws DatosException  {
 		Usuario usr = obtener(idUsr);
 		if (usr != null) {
-			borrarEquivalenciaId(usr.getIdUsr());
-			borrar(usr);
+			try {
+				borrarEquivalenciaId(usr.getIdUsr());
+				borrar(usr);
+			} 
+			catch (SQLException e) {
+				e.printStackTrace();
+			}
 		}
 		else {
 			throw new DatosException("BAJA: El Usuario " + usr.getIdUsr() + " no existe...");
@@ -429,15 +474,20 @@ public class UsuariosDAO implements OperacionesDAO {
 	/**
 	 * Elimina el usuario.
 	 * @param usuario - el usuario para eliminar.
+	 * @throws SQLException 
 	 */
-	private void borrar(Usuario usr) {
+	private void borrar(Usuario usr) throws SQLException {
 		bufferObjetos.remove(usr);
-		try {
-			sentenciaId.executeQuery("DELETE FROM usuarios WHERE idUsr = '" + usr.getIdUsr() + "'");
-		} 
-		catch (SQLException e) {
-			e.printStackTrace();
-		}		
+		sentenciaId.executeQuery("DELETE FROM usuarios WHERE idUsr = '" + usr.getIdUsr() + "'");		
+	}
+
+	/**
+	 * Elimina las equivalencias de nif y correo para un idUsr.
+	 * @param usuario - el usuario para eliminar sus equivalencias de idUsr.
+	 * @throws SQLException 
+	 */
+	private void borrarEquivalenciaId(String idUsr) throws SQLException {
+		sentenciaId.executeQuery("DELETE FROM equivalid WHERE idUsr = '" + idUsr + "'");
 	}
 	
 	/**
@@ -450,61 +500,9 @@ public class UsuariosDAO implements OperacionesDAO {
 
 	}
 
-	//GESTION equivalencias id
 	/**
-	 * Registra las equivalencias de nif y correo para un idUsr.
-	 * @param usuario
+	 * Cierra conexiones.
 	 */
-	private void registrarEquivalenciaId(Usuario usr) {
-		try {
-			ResultSet rsEquival = null;
-			// Se realiza la consulta y los resultados quedan en el ResultSet
-			rsEquival = sentenciaId.executeQuery("SELECT * FROM equivalid");
-			rsEquival.moveToInsertRow();
-			rsEquival.updateString("equival", usr.getNif().toString());
-			rsEquival.updateString("idUsr", usr.getIdUsr().toString());
-			rsEquival.insertRow();
-			rsEquival.beforeFirst();
-			rsEquival.moveToInsertRow();
-			rsEquival.updateString("equival", usr.getCorreo().toString());
-			rsEquival.updateString("idUsr", usr.getIdUsr().toString());
-			rsEquival.insertRow();
-			rsEquival.beforeFirst();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}		
-	}
-
-	/**
-	 * Obtiene el idUsr usado internamente a partir de otro equivalente.
-	 * @param id - la clave alternativa. 
-	 * @return - El idUsr equivalente.
-	 */
-	public String obtenerEquivalencia(String id) {
-		// Se realiza la consulta y los resultados quedan en el ResultSet
-		try {		
-			ResultSet rsEquival = sentenciaUsr.executeQuery("SELECT * FROM equivalid WHERE equival = '" + id + "'");
-			return rsEquival.getString(0);
-		} 
-		catch (SQLException e) {
-			e.printStackTrace();
-		}
-		return id;
-	}
-	
-	/**
-	 * Elimina las equivalencias de nif y correo para un idUsr.
-	 * @param usuario - el usuario para eliminar sus equivalencias de idUsr.
-	 */
-	private void borrarEquivalenciaId(String idUsr) {
-		try {
-			sentenciaId.executeQuery("DELETE FROM equivalid WHERE idUsr = '" + idUsr + "'");
-		} 
-		catch (SQLException e) {
-			e.printStackTrace();
-		}
-	}
-	
 	@Override
 	public void cerrar() {
 		try {
@@ -515,6 +513,5 @@ public class UsuariosDAO implements OperacionesDAO {
 			e.printStackTrace();
 		}
 	}
-
-
+	
 } // class

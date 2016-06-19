@@ -47,6 +47,10 @@ public class Fecha implements Serializable {
 		return calendario.get(Calendar.SECOND);
 	}
 	
+	public long getTime() {
+		return calendario.getTimeInMillis();
+	}
+	
 	public void setAño(int año) {
 		calendario.set(Calendar.YEAR, año);
 	}
@@ -209,6 +213,7 @@ public class Fecha implements Serializable {
 	public Object clone() {
 		return new Fecha(this);
 	}
+
 
 	
 } // class
